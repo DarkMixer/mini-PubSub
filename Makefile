@@ -37,7 +37,7 @@ INCLUDE	:= include
 LIB		:= lib
 
 ifeq ($(OS),Windows_NT)
-MAIN	:= SocketServer.exe
+MAIN	:= mini-PubSub.exe
 #SOURCEDIRS	:= $(SRC)
 INCLUDEDIRS	:= $(INCLUDE)
 LIBDIRS		:= $(LIB)
@@ -46,7 +46,7 @@ RM = rm -f
 MD	:= mkdir
 LFLAGS := -lwsock32 
 else
-MAIN	:= SocketServer
+MAIN	:= mini-PubSub
 #SOURCEDIRS	:= $(shell find $(SRC) -type d)
 INCLUDEDIRS	:= $(shell find $(INCLUDE) -type d)
 LIBDIRS		:= $(shell find $(LIB) -type d)
