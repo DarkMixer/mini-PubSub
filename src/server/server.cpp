@@ -11,7 +11,7 @@ Server::~Server() {
 }
 
 void Server::shutdown(){
-    close(_masterSocket_fd);
+    close(m_masterSocket_fd);
 #ifdef _WIN32    
     WSACleanup();
 #endif    
@@ -24,17 +24,17 @@ void Server::init(){
 }
 
 void Server::loop(){
-    _temp_fd = _master_fd;
+    fd_temp = fd_master;
     
-    int n_sel = select(_max_fd + 1, &_temp_fd, NULL, NULL, NULL); // Blocks until activity
+    int n_sel = select(max_fd + 1, &fd_temp, NULL, NULL, NULL); // Blocks until activity
     if(n_sel < 0) {
         perror("[SERVER] [ERROR] select() failed");
         shutdown();
     }
 
-    for(int n_fd = 0; n_fd <= _max_fd; n_fd++) {
-        if(FD_ISSET(n_fd, &_temp_fd)) {
-            if(_masterSocket_fd == n_fd) {
+    for(int n_fd = 0; n_fd <= max_fd; n_fd++) {
+        if(FD_ISSET(n_fd, &fd_temp)) {
+            if(m_masterSocket_fd == n_fd) {
                 incomming_connection();
             } else {
                 receiveInput(n_fd);
@@ -50,12 +50,13 @@ int Server::transmit(uint16_t fd, const char* data){
 
     if(n_res <= 0){
         if(n_res == 0){
-            _onDisconnectCallback((uint16_t)fd);
+            if(_onDisconnectCallback != NULL)
+                _onDisconnectCallback((uint16_t)fd);
         } else {
             perror("[SERVER] [ERROR] send() failed");
         }
         close(fd);
-        FD_CLR(fd, &_master_fd);
+        FD_CLR(fd, &fd_master);
         return -1;
     }
     return 0;
@@ -80,27 +81,27 @@ int Server::setup(int port) {
       throw "Could not start WSA";
     }
 #endif    
-    _masterSocket_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if(_masterSocket_fd < 0) {
+    m_masterSocket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if(m_masterSocket_fd < 0) {
         perror("[SERVER] [ERRPR] Socket creation failed");
         return -1;
     }
 
-    FD_ZERO(&_master_fd);
-    FD_ZERO(&_temp_fd);
+    FD_ZERO(&fd_master);
+    FD_ZERO(&fd_temp);
 
-    memset(&_serverAddr, 0, sizeof(_serverAddr));
-    _serverAddr.sin_family = AF_INET;
-    _serverAddr.sin_addr.s_addr = htons(INADDR_ANY);
-    _serverAddr.sin_port = htons(port);
+    memset(&m_serverAddr, 0, sizeof(m_serverAddr));
+    m_serverAddr.sin_family = AF_INET;
+    m_serverAddr.sin_addr.s_addr = htons(INADDR_ANY);
+    m_serverAddr.sin_port = htons(port);
 
-    bzero(_inBuffer, SERVER_IN_BUFFER_SIZE);
+    bzero(m_inBuffer, SERVER_IN_BUFFER_SIZE);
     return 0;
 }
 
 void Server::initSocket(){
     int n_optValue = 1;
-    int n_res = setsockopt(_masterSocket_fd, SOL_SOCKET, SO_REUSEADDR, (char*) &n_optValue, sizeof(int));
+    int n_res = setsockopt(m_masterSocket_fd, SOL_SOCKET, SO_REUSEADDR, (char*) &n_optValue, sizeof(int));
 
     if(n_res < 0) {
         perror("[SERVER] [ERROR] setsockopt() failed");
@@ -109,18 +110,18 @@ void Server::initSocket(){
 }
 
 void Server::bindSocket(){
-    int n_res = bind(_masterSocket_fd, (struct sockaddr*)&_serverAddr, sizeof(_serverAddr));
+    int n_res = bind(m_masterSocket_fd, (struct sockaddr*)&m_serverAddr, sizeof(m_serverAddr));
     if(n_res < 0) {
         perror("[SERVER] [ERROR] bind() failed");
         return;    
     }
 
-    FD_SET(_masterSocket_fd, &_master_fd);
-    _max_fd = _masterSocket_fd;
+    FD_SET(m_masterSocket_fd, &fd_master);
+    max_fd = m_masterSocket_fd;
 }
 
 void Server::startListen(){
-    int n_res = listen(_masterSocket_fd, 3);
+    int n_res = listen(m_masterSocket_fd, 3);
 
     if(n_res < 0){
         perror("[SERVER] [ERROR] listen() failed");
@@ -128,38 +129,40 @@ void Server::startListen(){
 }
 
 void Server::incomming_connection(){
-    socklen_t n_addrLen = sizeof(_clientAddr);
-    _tempSocket_fd = accept(_masterSocket_fd, (struct sockaddr*)&_clientAddr, &n_addrLen);
+    socklen_t n_addrLen = sizeof(m_clientAddr);
+    m_tempSocket_fd = accept(m_masterSocket_fd, (struct sockaddr*)&m_clientAddr, &n_addrLen);
 
-    if(_tempSocket_fd < 0){
+    if(m_tempSocket_fd < 0){
         perror("[SERVER] [ERROR] accept() failed");
         return;
     }
 
-    FD_SET(_tempSocket_fd, &_master_fd);
-    if(_tempSocket_fd > _max_fd){
-        _max_fd = _tempSocket_fd;
+    FD_SET(m_tempSocket_fd, &fd_master);
+    if(m_tempSocket_fd > max_fd){
+        max_fd = m_tempSocket_fd;
     }
-
-    _onConnectCallback(_tempSocket_fd);
+    if(_onConnectCallback != NULL)
+        _onConnectCallback(m_tempSocket_fd);
 }
 
 void Server::receiveInput(int fd){
-    int n_recv_size = recv(fd, _inBuffer, SERVER_IN_BUFFER_SIZE, 0);
+    int n_recv_size = recv(fd, m_inBuffer, SERVER_IN_BUFFER_SIZE, 0);
 
     if(n_recv_size <= 0){
         if(n_recv_size == 0){
-            _onDisconnectCallback((uint16_t)fd);
+            if(_onDisconnectCallback != NULL)
+                _onDisconnectCallback((uint16_t)fd);
         } else {
             perror("[SERVER] [ERROR] recv() failed");
         }
         close(fd);
-        FD_CLR(fd, &_master_fd);
+        FD_CLR(fd, &fd_master);
     } else {
-        _onInputCallback(fd, _inBuffer);
+        if(_onInputCallback != NULL)
+            _onInputCallback(fd, m_inBuffer);
     }
     
-    bzero(&_inBuffer, SERVER_IN_BUFFER_SIZE);
+    bzero(&m_inBuffer, SERVER_IN_BUFFER_SIZE);
 }
 
 

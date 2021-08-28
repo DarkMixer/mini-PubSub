@@ -6,12 +6,6 @@
 # define the Cpp compiler to use
 CXX = g++
 
-#ifeq ($(OS),Windows_NT)
-#CXX = g++
-#else
-#CXX = g++
-#endif
-
 # define any compile-time flags
 CXXFLAGS	:= -std=c++17 -Wall -Wextra -g -Wno-unused-parameter
 
@@ -25,7 +19,7 @@ OUTPUT	:= output
 BUILD_ROOT_PATH := build
 OUTPUT_OBJECT_PATH = $(BUILD_ROOT_PATH)/obj
 OUTPUT_BINARY_PATH = $(BUILD_ROOT_PATH)/bin
-SOURCEDIRS := src/server
+SOURCEDIRS := src/server src/controller
 
 # define source directory
 SRC		:= src
@@ -38,7 +32,6 @@ LIB		:= lib
 
 ifeq ($(OS),Windows_NT)
 MAIN	:= mini-PubSub.exe
-#SOURCEDIRS	:= $(SRC)
 INCLUDEDIRS	:= $(INCLUDE)
 LIBDIRS		:= $(LIB)
 FIXPATH = $(subst /,\,$1)
@@ -47,7 +40,6 @@ MD	:= mkdir
 LFLAGS := -lwsock32 
 else
 MAIN	:= mini-PubSub
-#SOURCEDIRS	:= $(shell find $(SRC) -type d)
 INCLUDEDIRS	:= $(shell find $(INCLUDE) -type d)
 LIBDIRS		:= $(shell find $(LIB) -type d)
 FIXPATH = $1
@@ -67,14 +59,8 @@ INCLUDES	:= $(patsubst %,-I%, $(INCLUDEDIRS:%/=%))
 # define the C libs
 LIBS		:= $(patsubst %,-L%, $(LIBDIRS:%/=%))
 
-
 SOURCES := $(call find, $(SOURCEDIRS),*.cpp) src/main.cpp
 
-# define the C source files
-#SOURCES		:= $(wildcard $(patsubst %,%/*.cpp, $(SOURCEDIRS)))
-
-# define the C object files 
-#OBJECTS		:= $(SOURCES:.cpp=.o)
 OBJECTS := $(SOURCES:%.cpp=$(OUTPUT_OBJECT_PATH)/%.o)
 
 
@@ -104,9 +90,6 @@ $(OUTPUT_OBJECT_PATH)/%.o: %.cpp
 	@echo C+ $<
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $<  -o $@
-
-#.cpp.o:
-#	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $<  -o $@
 
 .PHONY: clean
 clean:

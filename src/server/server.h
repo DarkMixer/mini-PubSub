@@ -32,6 +32,26 @@ namespace worldwidewhat {
      * @version 1.0
      */
     class Server {
+        private: // Variables
+        
+        fd_set fd_master;
+        fd_set fd_temp;
+
+        uint16_t max_fd;
+
+        int m_masterSocket_fd;
+        int m_tempSocket_fd;
+
+        struct sockaddr_storage m_clientAddr;
+        struct sockaddr_in m_serverAddr;
+
+        char m_inBuffer[SERVER_IN_BUFFER_SIZE];
+
+        std::function<void(uint16_t)> _onConnectCallback;
+        std::function<void(uint16_t)> _onDisconnectCallback;
+        std::function<void(uint16_t, char*)> _onInputCallback;        
+
+
         public:
         Server(int port=9000);
         virtual ~Server();
@@ -85,26 +105,6 @@ namespace worldwidewhat {
          * @param fd Client ID
          */
         void receiveInput(int fd);
-
-        private: // Variables
-        
-        fd_set _master_fd;
-        fd_set _temp_fd;
-
-        uint16_t _max_fd;
-
-        int _masterSocket_fd;
-        int _tempSocket_fd;
-
-        struct sockaddr_storage _clientAddr;
-        struct sockaddr_in _serverAddr;
-
-        char _inBuffer[SERVER_IN_BUFFER_SIZE];
-//        char _removeIP[INET6_ADDRSTRLEN];
-
-        std::function<void(uint16_t)> _onConnectCallback;
-        std::function<void(uint16_t)> _onDisconnectCallback;
-        std::function<void(uint16_t, char*)> _onInputCallback;
     };
 }
 
