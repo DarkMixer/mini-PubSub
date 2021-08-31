@@ -25,7 +25,7 @@ typedef int socklen_t;
 #endif
 
 namespace worldwidewhat {
-    #define SERVER_IN_BUFFER_SIZE 2048  // Incomming data buffer length
+    #define SERVER_IN_BUFFER_SIZE 10  // Incomming data buffer length
     /**
      * @brief TCP/IP Server
      * @author lh@ctcoin.com

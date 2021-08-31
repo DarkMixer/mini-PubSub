@@ -1,4 +1,9 @@
 #include "server.h"
+#ifdef _WIN32
+#include <winsock.h>
+#else
+#include <sys/ioctl.h>
+#endif
 
 using namespace  worldwidewhat;
 
@@ -146,23 +151,42 @@ void Server::incomming_connection(){
 }
 
 void Server::receiveInput(int fd){
-    int n_recv_size = recv(fd, m_inBuffer, SERVER_IN_BUFFER_SIZE, 0);
+    std::vector<char> l_bffr;
 
-    if(n_recv_size <= 0){
-        if(n_recv_size == 0){
+    char buf[10];
+    int n;
+    int flag = 1;
+
+    do {
+        n = recv(fd, buf, sizeof(buf),0);
+        if (n > 0) {
+            int bffr_index = 0;
+            for(bffr_index = 0; bffr_index < n; bffr_index++){
+                l_bffr.push_back(buf[bffr_index]);
+            }
+#ifdef _WIN32
+            ioctlsocket(fd, FIONREAD, &flag);
+#else
+            ioctl(fd, FIONREAD, &flag);
+#endif            
+            
+        } else {
+            flag = 0;
+        }
+    } while (flag > 0);    
+
+    if(n <= 0){
+        if(n == 0){
             if(_onDisconnectCallback != NULL)
                 _onDisconnectCallback((uint16_t)fd);
-        } else {
-            perror("[SERVER] [ERROR] recv() failed");
         }
         close(fd);
         FD_CLR(fd, &fd_master);
-    } else {
-        if(_onInputCallback != NULL)
-            _onInputCallback(fd, m_inBuffer);
+        return;
     }
+    if(_onInputCallback != NULL && l_bffr.data() != NULL)
+        _onInputCallback(fd, l_bffr.data());
     
-    bzero(&m_inBuffer, SERVER_IN_BUFFER_SIZE);
 }
 
 

@@ -3950,10 +3950,13 @@ void from_json(const BasicJsonType& j, typename BasicJsonType::boolean_t& b)
 template<typename BasicJsonType>
 void from_json(const BasicJsonType& j, typename BasicJsonType::string_t& s)
 {
+    
     if (JSON_HEDLEY_UNLIKELY(!j.is_string()))
     {
+
         JSON_THROW(type_error::create(302, "type must be string, but is " + std::string(j.type_name()), j));
     }
+    
     s = *j.template get_ptr<const typename BasicJsonType::string_t*>();
 }
 

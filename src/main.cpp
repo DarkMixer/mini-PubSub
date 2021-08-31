@@ -41,9 +41,11 @@ void onDisconnect(uint16_t client){
  * @param data  - Data received from client
  */
 void onInputReceived(uint16_t client, char* data){
+    
     json j_receive = json::parse(data, nullptr, false);
 
     if (!j_receive.is_discarded()){
+        try{
         std::string str_type = j_receive.value("type", "");
         std::string str_topic = j_receive.value("topic", "");
         if(str_type == "SUB"){
@@ -64,12 +66,18 @@ void onInputReceived(uint16_t client, char* data){
         } else if (str_type == "ACK"){
 
         } else {
+            std::printf("ERROR 11\n");
             transmitResponse(client, false);
             return;    
         }
+        }catch(...){
+            transmitResponse(client, false);    
+        }
     } else {
         transmitResponse(client, false);
+        std::printf("ERROR 12\n");
     }
+    j_receive.clear();
 }
 
 void transmitToClient(uint16_t client, std::string key, std::string value){
